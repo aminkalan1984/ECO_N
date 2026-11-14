@@ -41,6 +41,7 @@ import com.example.domain.PersianFormat
 import com.example.domain.RateTables
 import com.example.ui.components.ActionCard
 import com.example.ui.components.BarDatum
+import com.example.ui.components.DailyGenerationTrendChart
 import com.example.ui.components.DataFreshness
 import com.example.ui.components.DropdownPill
 import com.example.ui.components.EcoBarChart
@@ -52,7 +53,6 @@ import com.example.ui.components.HeroStat
 import com.example.ui.components.InfoRow
 import com.example.ui.components.PanelTitle
 import com.example.ui.components.PillTone
-import com.example.ui.components.ProductionAreaChart
 import com.example.ui.components.ScenarioLabel
 import com.example.ui.components.ScreenHeader
 import com.example.ui.theme.EcoTheme
@@ -149,7 +149,13 @@ fun DashboardScreen(
             }
 
             if (range == TelemetryRange.DAY) {
-                ProductionAreaChart(peakKw = telemetry.pLiveKw)
+                Spacer(Modifier.height(14.dp))
+                DailyGenerationTrendChart(
+                    peakKw = telemetry.pLiveKw,
+                    todayKwh = telemetry.todayKwh,
+                    weekSeries = telemetry.weekSeries,
+                    performanceRatioPct = telemetry.performanceRatioPct
+                )
             } else {
                 EcoBarChart(
                     data = chartData,
@@ -287,8 +293,8 @@ fun DashboardScreen(
 
             ActionCard(
                 icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                title = "تأیید و اسکن قبض برق",
-                subtitle = "تحلیل هوشمند تصویر قبض با هوش مصنوعی",
+                title = "اسکن دوربین و تحلیل قبض برق",
+                subtitle = "عکسبرداری از قبض برای استخراج مصرف و برآورد صرفه‌جویی خورشیدی",
                 onClick = { onNavigate("bill") },
                 modifier = Modifier.testTag("dashboard_bill_card")
             )

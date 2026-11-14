@@ -67,6 +67,7 @@ import com.example.domain.BillChecks
 import com.example.domain.BillField
 import com.example.domain.BillIssue
 import com.example.domain.Confidence
+import com.example.domain.EcoCalc
 import com.example.domain.PersianFormat
 import com.example.ui.components.EcoPill
 import com.example.ui.components.EcoScreenShell
@@ -76,6 +77,7 @@ import com.example.ui.components.InfoRow
 import com.example.ui.components.InkButton
 import com.example.ui.components.PillTone
 import com.example.ui.components.ScreenHeader
+import com.example.ui.components.SolarSavingsCard
 import com.example.ui.components.WhiteButton
 import com.example.ui.theme.EcoTheme
 import com.example.ui.viewmodel.BillAiViewModel
@@ -114,6 +116,7 @@ fun BillScreen(
     }
     var issueKeys by remember { mutableStateOf(emptySet<BillRowKey>()) }
     var aiSummary by remember { mutableStateOf<String?>(null) }
+    var extractedPeriodDays by remember { mutableStateOf(60) }
     var confidencePct by remember { mutableStateOf(92) }
     var sourceLabel by remember { mutableStateOf("manual") }
     var confirmSheetOpen by remember { mutableStateOf(false) }
@@ -138,11 +141,15 @@ fun BillScreen(
     }
 
     fun launchCameraCapture() {
-        val dir = File(context.cacheDir, "bill_photos").apply { mkdirs() }
-        val file = File(dir, "bill_${System.currentTimeMillis()}.jpg")
-        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        pendingCameraUri = uri
-        cameraLauncher.launch(uri)
+        runCatching {
+            val dir = File(context.cacheDir, "bill_photos").apply { mkdirs() }
+            val file = File(dir, "bill_${System.currentTimeMillis()}.jpg")
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            pendingCameraUri = uri
+            cameraLauncher.launch(uri)
+        }.onFailure {
+            ecoViewModel.emitToast("دوربین در دسترس نیست؛ می‌توانید تصویر قبض را از گالری انتخاب کنید.")
+        }
     }
 
     LaunchedEffect(aiUiState) {
@@ -154,6 +161,7 @@ fun BillScreen(
                     ecoViewModel.emitToast("این تصویر شبیه قبض برق نیست؛ عکس واضح قبض را بارگذاری کنید.")
                 } else {
                     aiSummary = b.summary?.trim()?.takeIf { it.isNotEmpty() }
+                    extractedPeriodDays = b.periodDays ?: 60
                     draft = BillData(
                         id = b.billId.orEmpty(),
                         period = b.period.orEmpty(),
@@ -214,6 +222,14 @@ fun BillScreen(
     val scanning = aiUiState is BillExtractionUiState.Loading
     val dirty = draft != ecoState.bill
     val usage = BillChecks.analyzeBillUsage(draft.peak, draft.mid, draft.low, draft.total)
+    val solarSavings = EcoCalc.estimateSolarSavingsFromBill(
+        peakKwh = draft.peak,
+        midKwh = draft.mid,
+        lowKwh = draft.low,
+        amountRial = draft.total,
+        periodDays = extractedPeriodDays,
+        channelId = ecoState.channel
+    )
 
     fun saveAndProceed() {
         val issuesSummary = mergedIssues.orEmpty().joinToString("؛ ") { "${it.field.label}: ${it.message}" }
@@ -279,9 +295,7 @@ fun BillScreen(
                             .clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.background)
                             .clickable(enabled = !scanning) {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
+                                launchCameraCapture()
                             }
                             .testTag("bill_photo_preview"),
                         contentAlignment = Alignment.Center
@@ -295,16 +309,38 @@ fun BillScreen(
                             )
                         } else {
                             Column(
-                                modifier = Modifier.fillMaxSize().padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.fillMaxSize().padding(14.dp),
+                                verticalArrangement = Arrangement.SpaceBetween,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                listOf(0.85f, 1f, 0.6f, 0.9f, 0.55f, 0.78f).forEach { w ->
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth(w)
-                                            .height(7.dp)
-                                            .clip(RoundedCornerShape(50))
-                                            .background(colors.track)
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                                ) {
+                                    listOf(0.85f, 1f, 0.6f, 0.9f).forEach { w ->
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth(w)
+                                                .height(6.dp)
+                                                .clip(RoundedCornerShape(50))
+                                                .background(colors.track)
+                                        )
+                                    }
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.CameraAlt,
+                                        contentDescription = null,
+                                        tint = colors.sunDeep,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "لمس برای اسکن قبض",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = colors.mutedText
                                     )
                                 }
                             }
@@ -337,16 +373,25 @@ fun BillScreen(
                             onClick = { launchCameraCapture() },
                             enabled = !scanning,
                             shape = RoundedCornerShape(50),
-                            color = MaterialTheme.colorScheme.background,
-                            modifier = Modifier.height(40.dp).testTag("bill_camera_button")
+                            color = colors.ink,
+                            modifier = Modifier.height(48.dp).testTag("bill_camera_button")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp),
+                                modifier = Modifier.padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(Icons.Filled.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Text("دوربین", style = MaterialTheme.typography.labelMedium)
+                                Icon(
+                                    Icons.Filled.CameraAlt,
+                                    contentDescription = "اسکن با دوربین",
+                                    tint = colors.inkForeground,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    "اسکن دوربین",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = colors.inkForeground
+                                )
                             }
                         }
                         Surface(
@@ -358,14 +403,14 @@ fun BillScreen(
                             enabled = !scanning,
                             shape = RoundedCornerShape(50),
                             color = MaterialTheme.colorScheme.background,
-                            modifier = Modifier.height(40.dp).testTag("bill_gallery_button")
+                            modifier = Modifier.height(48.dp).testTag("bill_gallery_button")
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 12.dp),
+                                modifier = Modifier.padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Filled.PhotoLibrary, contentDescription = "انتخاب از گالری", modifier = Modifier.size(16.dp))
                                 Text(if (photoUri != null) "عکس مجدد" else "گالری", style = MaterialTheme.typography.labelMedium)
                             }
                         }
@@ -597,6 +642,11 @@ fun BillScreen(
                         }
                     }
                 }
+            }
+
+            if (solarSavings != null) {
+                Spacer(Modifier.height(12.dp))
+                SolarSavingsCard(estimate = solarSavings)
             }
 
             Spacer(Modifier.height(18.dp))

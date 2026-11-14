@@ -124,4 +124,31 @@ object TelemetryCalc {
         }
         return 28.0 + shift
     }
+
+    fun buildHourlyPowerSeries(
+        peakKw: Double = 3.6,
+        nowHour: Double = 14.5
+    ): List<HourlyPowerPoint> {
+        val hours = listOf(6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 17.0, 18.0)
+        return hours.map { h ->
+            val clearSky = round1(productionAt(h, peakKw))
+            val actual = if (h <= nowHour) clearSky else null
+            val forecast = if (h >= nowHour - 0.5) round1(clearSky * 0.94) else null
+            HourlyPowerPoint(
+                hour = h,
+                label = "${PersianFormat.fa(h.toInt())}:۰۰",
+                actualKw = actual,
+                forecastKw = forecast,
+                optimalKw = clearSky
+            )
+        }
+    }
 }
+
+data class HourlyPowerPoint(
+    val hour: Double,
+    val label: String,
+    val actualKw: Double?,
+    val forecastKw: Double?,
+    val optimalKw: Double
+)

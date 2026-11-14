@@ -74,4 +74,68 @@ object EcoCalc {
 
     fun invoiceGross(meterKwh: Int, lockedRate: Long): Long =
         (meterKwh.toDouble() * lockedRate.toDouble()).roundToLong()
+
+    fun estimateSolarSavingsFromBill(
+        peakKwh: Int,
+        midKwh: Int,
+        lowKwh: Int,
+        amountRial: Long,
+        periodDays: Int = 60,
+        channelId: ChannelId = ChannelId.FIT_BATTERY,
+        table: RateTable = RateTables.ACTIVE
+    ): SolarSavingsEstimate? {
+        val totalKwh = peakKwh + midKwh + lowKwh
+        if (totalKwh <= 0) return null
+        val safeDays = periodDays.coerceIn(15, 120)
+        val dailyConsumptionKwh = totalKwh.toDouble() / safeDays.toDouble()
+        val monthlyConsumptionKwh = dailyConsumptionKwh * 30.0
+        val annualConsumptionKwh = dailyConsumptionKwh * 365.0
+
+        val annualYieldPerKwp = TABLE.scenario.monthlyProductionKwh.sum().toDouble() /
+            TABLE.scenario.pilotCapacityKwp
+        val rawKwp = annualConsumptionKwh / annualYieldPerKwp
+        val recommendedKwp = (kotlin.math.round(rawKwp * 2.0) / 2.0)
+            .coerceIn(1.0, table.loan.maxCapacityKwp)
+
+        val estimatedDailySolarKwh = (recommendedKwp * annualYieldPerKwp) / 365.0
+        val estimatedAnnualSolarKwh = (recommendedKwp * annualYieldPerKwp).roundToLong()
+        val billOffsetPct = ((estimatedDailySolarKwh / dailyConsumptionKwh) * 100.0)
+            .coerceIn(0.0, 100.0)
+            .toInt()
+
+        val monthlyBillCostRial = if (amountRial > 0L) {
+            ((amountRial.toDouble() / safeDays.toDouble()) * 30.0).roundToLong()
+        } else {
+            (monthlyConsumptionKwh * SELF_SUPPLY_RATE.toDouble()).roundToLong()
+        }
+
+        val monthlySelfSavingsRial = ((monthlyBillCostRial.toDouble() * billOffsetPct.toDouble()) / 100.0).roundToLong()
+        val activeChannelRate = channelRate(channelId)
+        val monthlyFitRevenueRial = ((estimatedAnnualSolarKwh.toDouble() / 12.0) * activeChannelRate.toDouble()).roundToLong()
+        val annualCo2SavedKg = (estimatedAnnualSolarKwh.toDouble() * 0.58).roundToLong()
+
+        return SolarSavingsEstimate(
+            dailyConsumptionKwh = dailyConsumptionKwh,
+            recommendedKwp = recommendedKwp,
+            estimatedDailySolarKwh = estimatedDailySolarKwh,
+            estimatedAnnualSolarKwh = estimatedAnnualSolarKwh,
+            billOffsetPct = billOffsetPct,
+            monthlyBillCostRial = monthlyBillCostRial,
+            monthlySelfSavingsRial = monthlySelfSavingsRial,
+            monthlyFitRevenueRial = monthlyFitRevenueRial,
+            annualCo2SavedKg = annualCo2SavedKg
+        )
+    }
 }
+
+data class SolarSavingsEstimate(
+    val dailyConsumptionKwh: Double,
+    val recommendedKwp: Double,
+    val estimatedDailySolarKwh: Double,
+    val estimatedAnnualSolarKwh: Long,
+    val billOffsetPct: Int,
+    val monthlyBillCostRial: Long,
+    val monthlySelfSavingsRial: Long,
+    val monthlyFitRevenueRial: Long,
+    val annualCo2SavedKg: Long
+)
