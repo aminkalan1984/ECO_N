@@ -1,0 +1,6 @@
+{
+  "name": "اکوسولار",
+  "description": "مدیریت هوشمند نیروگاه خورشیدی خانگی، تحلیل قبض برق، بهینه‌سازی مصرف، انتخاب کانال درآمد و دستیار هوش مصنوعی.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

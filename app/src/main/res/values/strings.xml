@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">اکوسولار</string>
+    <string name="app_tagline">مدیریت هوشمند انرژی خورشیدی شما</string>
+    <string name="nav_home">خانه</string>
+    <string name="nav_design">طرح نیروگاه</string>
+    <string name="nav_case">پرونده</string>
+    <string name="nav_income">درآمد</string>
+    <string name="nav_profile">پروفایل</string>
+    <string name="cd_back">بازگشت</string>
+    <string name="cd_profile">پروفایل</string>
+    <string name="cd_notifications">اعلان‌ها</string>
+    <string name="cd_main_menu">منوی اصلی</string>
+    <string name="cd_close_menu">بستن منو</string>
+    <string name="cd_info">توضیحات</string>
+    <string name="cd_send">ارسال</string>
+</resources>

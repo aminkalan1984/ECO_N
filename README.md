@@ -1,11 +1,26 @@
-<div align="center">
+# اکوسولار (EcoSolar Android)
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+اپلیکیشن بومی اندروید اکوسولار با زبان **Kotlin** و **Jetpack Compose (Material 3)** برای مدیریت هوشمند نیروگاه خورشیدی خانگی، تحلیل قبض برق با هوش مصنوعی، بهینه‌سازی مصرف، انتخاب کانال درآمد، شبیه‌ساز پوشش قسط و صورتحساب خرید تضمینی.
 
-  <h1>Built with AI Studio</h2>
+## ساختار و فناوری‌ها
+- **رابط کاربری:** Jetpack Compose + Material 3 با چیدمان کامل راست‌به‌چپ (RTL) و فونت فارسی `Vazirmatn`
+- **معماری:** MVVM + Clean Domain Layer (`EcoCalc`, `RateTables`, `BillChecks`, `LoadProfileCalc`, `TelemetryCalc`, `AuthOtpEngine`)
+- **ذخیره‌سازی پایدار:** Room (`AppDatabase`) برای تاریخچه نسخه‌های قبض، پیام‌های دستیار، گزارش‌های نیروگاه، رضایت‌نامه‌ها و رخدادهای ممیزی + DataStore (`EcoPreferences`)
+- **هوش مصنوعی:** Firebase AI Logic (`gemini-3.8-flash`) به همراه Firebase App Check برای تحلیل تصویری و متنی قبض برق (خروجی JSON ساخت‌یافته) و دستیار هوشمند استریمینگ
+- **ناوبری:** Navigation Compose با مسیرهای Type-Safe (`@Serializable`)
 
-  <p>The fastest path from prompt to production with Gemini.</p>
-
-  <a href="https://aistudio.google.com/apps">Start building</a>
-
-</div>
+## صفحهٔ کلیدی‌ها
+۱. ورود با شماره موبایل و کد یک‌بارمصرف (OTP)
+۲. داشبورد نیروگاه با نمودار تولید و درآمد ساعتی
+۳. قبض برق و تحلیل هوشمند تصویر/متن قبض + ثبت و تأیید مشخصات
+۴. تاریخچه نسخه‌های قبض
+۵. ویزارد ۶ مرحله‌ای پروفایل بار و بام
+۶. بهینه‌سازی مصرف و برنامه دمایی
+۷. طرح نیروگاه (ظرفیت، باتری و تولید ماهانه)
+۸. انتخاب کانال درآمد (خرید تضمینی در برابر خودتأمین)
+۹. شبیه‌ساز چندساله پوشش قسط وام ساتبا
+۱۰. مقایسه پیش‌فاکتورهای نصب
+۱۱. پرونده نیروگاه، موافقت‌نامه مهرسان و ثبت سفارش
+۱۲. درآمد، تطبیق کنتور و صورتحساب ماهانه
+۱۳. مدیریت پروفایل و حریم خصوصی
+۱۴. دستیار هوش مصنوعی استریمینگ
